@@ -1,0 +1,53 @@
+services:
+  app_backend:
+    build: ./backend
+    image: raul2455/foodgram_backend:1.1
+    restart: unless-stopped
+    volumes:
+      - static_content:/app/static/
+      - media_content:/app/media/
+    depends_on:
+      - database
+    env_file:
+      - ./config/.env
+    networks:
+      - app_network
+
+  app_frontend:
+    image: raul2455/foodgram_frontend:1.1
+    volumes:
+      - ./frontend/:/app/result_build/
+      - static_content:/var/html/static/
+    networks:
+      - app_network
+
+  webserver:
+    image: nginx:1.21.6-alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./config/nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./frontend/build:/usr/share/nginx/html/
+      - /d/Dev/foodgram-project-react-master/docs:/usr/share/nginx/html/api/docs
+      - static_content:/var/html/static/
+      - media_content:/var/html/media/
+    networks:
+      - app_network
+
+  database:
+    image: postgres:17
+    volumes:
+      - db_data:/var/lib/postgresql/data/
+    env_file:
+      - ./config/.env
+    networks:
+      - app_network
+
+volumes:
+  static_content:
+  media_content:
+  db_data:
+
+networks:
+  app_network:
+    driver: bridge
