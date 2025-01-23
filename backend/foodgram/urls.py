@@ -1,22 +1,41 @@
 """
-URL configuration for foodgram project.
+Модуль для настройки URL-маршрутов проекта Foodgram.
 
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/4.2/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
+Этот модуль определяет основные маршруты для API, административной панели
+и аутентификации (например, Djoser).
 """
-from django.contrib import admin
-from django.urls import path
 
+from django.contrib import admin
+from django.urls import include, path
+from django.http import HttpResponse
+
+# Простое представление для главной страницы
+def index(request):
+    return HttpResponse("""
+        <html>
+        <head>
+            <title>Foodgram</title>
+        </head>
+        <body>
+            <h1>Добро пожаловать в Foodgram!</h1>
+            <p>Это главная страница вашего проекта.</p>
+            <p>Перейдите в <a href="/api/">API</a> или <a href="/admin/">админку</a>.</p>
+        </body>
+        </html>
+    """)
+
+# Основные URL-маршруты приложения
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    # Главная страница
+    path("", index, name="index"),  # Главная страница
+
+    # Маршруты для API
+    path("api/", include("api.urls", namespace="api")),
+
+    # Маршруты для административной панели Django
+    path("admin/", admin.site.urls),
+
+    # Маршруты для аутентификации (Djoser)
+    path("auth/", include("djoser.urls")),
+    path("auth/", include("djoser.urls.authtoken")),
 ]

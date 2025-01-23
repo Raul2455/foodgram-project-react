@@ -26,11 +26,10 @@ class TagAdmin(admin.ModelAdmin):
     Административная панель для модели Tag.
     Позволяет управлять тегами.
     """
-    list_display = ('name', 'slug', 'color')
+    list_display = ('name', 'slug')
     search_fields = ('name', 'slug')
     prepopulated_fields = {'slug': ('name',)}
     empty_value_display = '-пусто-'
-
 
 class IngredientInRecipeInline(admin.TabularInline):
     """

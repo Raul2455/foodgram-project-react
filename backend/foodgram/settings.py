@@ -21,7 +21,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('SECRET_KEY', default='django-insecure-default-key')
 
 # Режим отладки (берется из переменной окружения или используется значение по умолчанию)
-DEBUG = os.getenv('DEBUG', default='True') == 'True'
+DEBUG = os.getenv('DEBUG', default='False') == 'False'
 
 # Разрешенные хосты (все хосты разрешены)
 ALLOWED_HOSTS = ['*']

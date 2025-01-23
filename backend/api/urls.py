@@ -5,6 +5,9 @@ from rest_framework.routers import DefaultRouter
 
 from api.views import IngredientsViewSet, RecipesViewSet, TagsViewSet
 
+# Определяем app_name для использования namespace
+app_name = "api"
+
 # Создаем экземпляр DefaultRouter для автоматической генерации URL
 router = DefaultRouter()
 

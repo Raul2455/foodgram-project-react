@@ -15,7 +15,7 @@ from rest_framework.response import Response
 
 from api.filter import RecipesFilter
 from api.mixins import ReadOnlyViewSet
-from api.utils import generate_shopping_list_pdf
+from .utils import generate_shopping_list_pdf
 from api.permissions import AuthorAdminOrReadOnlyPermission
 from api.serializers import (
     TagSerializer,
