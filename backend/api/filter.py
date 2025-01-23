@@ -2,10 +2,13 @@ from django_filters import FilterSet
 from django_filters import rest_framework as filters
 from recipes.models import Recipe, Tag
 
+
 class RecipesFilter(FilterSet):
     """
     Фильтр для модели Recipe.
-    Позволяет фильтровать рецепты по названию, автору, тегам и времени приготовления.
+
+    Позволяет фильтровать рецепты по названию, автору,
+    тегам и времени приготовления.
     """
 
     # Фильтр по названию рецепта (регистронезависимый поиск)

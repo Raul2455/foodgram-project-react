@@ -1,5 +1,7 @@
 """
 Модуль для работы с генерацией PDF-документов.
+
+Используется для создания PDF-файлов, таких как списки покупок и рецепты.
 """
 
 import os
@@ -16,7 +18,9 @@ from foodgram.settings import MEDIA_ROOT, SITE_NAME
 
 
 # Регистрация шрифта
-pdfmetrics.registerFont(TTFont('DejaVuSerif', os.path.join(MEDIA_ROOT, 'fonts/DejaVuSerif.ttf')))
+pdfmetrics.registerFont(
+    TTFont('DejaVuSerif', os.path.join(MEDIA_ROOT, 'fonts/DejaVuSerif.ttf'))
+)
 
 
 def generate_pdf(filename, title, content):
@@ -29,25 +33,38 @@ def generate_pdf(filename, title, content):
     :return: Путь к сохраненному PDF-файлу.
     """
     # Создаем документ
-    doc = SimpleDocTemplate(filename, pagesize=A4, rightMargin=2 * cm, leftMargin=2 * cm, topMargin=2 * cm, bottomMargin=2 * cm)
+    doc = SimpleDocTemplate(
+        filename,
+        pagesize=A4,
+        rightMargin=2 * cm,
+        leftMargin=2 * cm,
+        topMargin=2 * cm,
+        bottomMargin=2 * cm
+    )
+
+    # Получаем стандартные стили
     styles = getSampleStyleSheet()
 
     # Стиль для заголовка
     title_style = ParagraphStyle(
         name='TitleStyle',
+        parent=styles['Heading1'],  # Использование стандартного стиля
         fontName='DejaVuSerif',
         fontSize=18,
         alignment=TA_CENTER,
-        spaceAfter=1 * cm
+        spaceAfter=1 * cm,
+        textColor=colors.darkblue  # Использование colors
     )
 
     # Стиль для основного текста
     text_style = ParagraphStyle(
         name='TextStyle',
+        parent=styles['BodyText'],  # Использование стандартного стиля
         fontName='DejaVuSerif',
         fontSize=12,
         alignment=TA_LEFT,
-        spaceAfter=0.5 * cm
+        spaceAfter=0.5 * cm,
+        textColor=colors.black  # Использование colors
     )
 
     # Элементы документа
@@ -73,14 +90,17 @@ def generate_shopping_list_pdf(user, ingredients):
     Генерирует PDF-документ со списком покупок для пользователя.
 
     :param user: Пользователь, для которого создается список.
-    :param ingredients: Список ингредиентов в формате [{'name': str, 'amount': str}].
+    :param ingredients: Список ингредиентов в формате
+    [{'name': str, 'amount': str}].
     :return: Путь к сохраненному PDF-файлу.
     """
     # Название файла
-    filename = os.path.join(MEDIA_ROOT, f'shopping_lists/{user.username}_shopping_list.pdf')
+    filename = os.path.join(
+        MEDIA_ROOT, f'shopping_lists/{user.username}_shopping_list.pdf'
+    )
 
     # Заголовок документа
-    title = f'Список покупок для {user.username}'
+    title = f'Список покупок для {user.username} ({SITE_NAME})'
 
     # Содержимое документа
     content = [f"{item['name']} - {item['amount']}" for item in ingredients]
@@ -100,14 +120,19 @@ def generate_recipe_pdf(recipe):
     filename = os.path.join(MEDIA_ROOT, f'recipes/{recipe.id}_recipe.pdf')
 
     # Заголовок документа
-    title = f'Рецепт: {recipe.title}'
+    title = f'Рецепт: {recipe.title} ({SITE_NAME})'  # Использование SITE_NAME
 
     # Содержимое документа
     content = [
         f"Автор: {recipe.author.username}",
         f"Описание: {recipe.description}",
         "Ингредиенты:",
-        *[f"- {ingredient.name} ({ingredient.amount} {ingredient.measurement_unit})" for ingredient in recipe.ingredients.all()],
+        *[
+            f"- {ingredient.name} "  # Название ингредиента
+            f"({ingredient.amount} "  # Количество
+            f"{ingredient.measurement_unit})"  # Единица измерения
+            for ingredient in recipe.ingredients.all()
+        ],
         f"Время приготовления: {recipe.cooking_time} минут",
     ]
 

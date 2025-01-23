@@ -1,6 +1,7 @@
 from rest_framework import mixins, viewsets
 from rest_framework.response import Response
 
+
 class ReadOnlyViewSet(
     mixins.ListModelMixin,        # Миксин для получения списка объектов
     mixins.RetrieveModelMixin,    # Миксин для получения одного объекта
@@ -14,7 +15,8 @@ class ReadOnlyViewSet(
 
     def get_queryset(self):
         """
-        Возвращает queryset, который будет использоваться для получения объектов.
+        Возвращает queryset, который будет использоваться
+        для получения объектов.
         Этот метод можно переопределить в дочерних классах для фильтрации или
         изменения queryset.
         """
@@ -23,7 +25,8 @@ class ReadOnlyViewSet(
     def get_serializer_context(self):
         """
         Возвращает контекст, который будет передан в сериализатор.
-        Этот метод можно переопределить для добавления дополнительных данных в контекст.
+        Этот метод можно переопределить для добавления
+        дополнительных данных в контекст.
         """
         context = super().get_serializer_context()
         context.update({

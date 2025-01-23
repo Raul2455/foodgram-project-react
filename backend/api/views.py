@@ -1,5 +1,6 @@
 """
-Модуль для обработки запросов API, связанных с рецептами, ингредиентами и тегами.
+Модуль для обработки запросов API,
+связанных с рецептами, ингредиентами и тегами.
 """
 
 from django.db.models import Sum
@@ -17,11 +18,12 @@ from api.mixins import ReadOnlyViewSet
 from api.utils import generate_shopping_list_pdf
 from api.permissions import AuthorAdminOrReadOnlyPermission
 from api.serializers import (
-    ActionsSerializer,
-    IngredientsSerializer,
-    RecipesSerializer,
-    RecipesSerializerCreate,
-    TagsSerializer
+    TagSerializer,
+    IngredientSerializer,
+    RecipeReadSerializer,
+    RecipeWriteSerializer,
+    FavoriteSerializer,
+    ShoppingCartSerializer,
 )
 from recipes.models import (
     Cart,
@@ -29,7 +31,7 @@ from recipes.models import (
     Ingredient,
     IngredientInRecipe,
     Recipe,
-    Tag
+    Tag,
 )
 
 
@@ -46,7 +48,7 @@ class TagsViewSet(ReadOnlyViewSet):
     Поддерживает только чтение (GET-запросы).
     """
     queryset = Tag.objects.all()
-    serializer_class = TagsSerializer
+    serializer_class = TagSerializer
     pagination_class = None  # Отключаем пагинацию для тегов
 
 
@@ -56,7 +58,7 @@ class IngredientsViewSet(ReadOnlyViewSet):
     Поддерживает только чтение (GET-запросы).
     """
     queryset = Ingredient.objects.all()
-    serializer_class = IngredientsSerializer
+    serializer_class = IngredientSerializer
     filter_backends = [IngredientFilter]
     search_fields = ['^name']  # Поиск по началу названия
     pagination_class = None  # Отключаем пагинацию для ингредиентов
@@ -68,7 +70,6 @@ class RecipesViewSet(viewsets.ModelViewSet):
     Поддерживает все CRUD-операции.
     """
     queryset = Recipe.objects.all()
-    serializer_class = RecipesSerializer
     permission_classes = [AuthorAdminOrReadOnlyPermission]
     filter_backends = [DjangoFilterBackend]
     filterset_class = RecipesFilter
@@ -79,10 +80,11 @@ class RecipesViewSet(viewsets.ModelViewSet):
         Возвращает соответствующий сериализатор в зависимости от действия.
         """
         if self.action in ['create', 'update', 'partial_update']:
-            return RecipesSerializerCreate
-        return RecipesSerializer
+            return RecipeWriteSerializer
+        return RecipeReadSerializer
 
-    @action(detail=True, methods=['post', 'delete'], permission_classes=[permissions.IsAuthenticated])
+    @action(detail=True, methods=['post', 'delete'],
+            permission_classes=[permissions.IsAuthenticated])
     def favorite(self, request, pk=None):
         """
         Добавляет или удаляет рецепт из избранного.
@@ -92,13 +94,14 @@ class RecipesViewSet(viewsets.ModelViewSet):
 
         if request.method == 'POST':
             # Проверяем, не добавлен ли рецепт уже в избранное
-            favorite, created = Favorite.objects.get_or_create(user=user, recipe=recipe)
+            favorite, created = Favorite.objects.get_or_create(
+                user=user, recipe=recipe)
             if not created:
                 return Response(
                     {'detail': 'Рецепт уже в избранном.'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-            serializer = ActionsSerializer(recipe)
+            serializer = FavoriteSerializer(favorite)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         if request.method == 'DELETE':
@@ -112,7 +115,8 @@ class RecipesViewSet(viewsets.ModelViewSet):
             favorite.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @action(detail=True, methods=['post', 'delete'], permission_classes=[permissions.IsAuthenticated])
+    @action(detail=True, methods=['post', 'delete'],
+            permission_classes=[permissions.IsAuthenticated])
     def shopping_cart(self, request, pk=None):
         """
         Добавляет или удаляет рецепт из корзины покупок.
@@ -122,13 +126,14 @@ class RecipesViewSet(viewsets.ModelViewSet):
 
         if request.method == 'POST':
             # Проверяем, не добавлен ли рецепт уже в корзину
-            cart, created = Cart.objects.get_or_create(user=user, recipe=recipe)
+            cart, created = Cart.objects.get_or_create(
+                user=user, recipe=recipe)
             if not created:
                 return Response(
                     {'detail': 'Рецепт уже в корзине.'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-            serializer = ActionsSerializer(recipe)
+            serializer = ShoppingCartSerializer(cart)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         if request.method == 'DELETE':
@@ -142,7 +147,8 @@ class RecipesViewSet(viewsets.ModelViewSet):
             cart.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
+    @action(detail=False, methods=['get'],
+            permission_classes=[permissions.IsAuthenticated])
     def download_shopping_cart(self, request):
         """
         Генерирует и возвращает PDF-файл со списком покупок.
@@ -162,7 +168,10 @@ class RecipesViewSet(viewsets.ModelViewSet):
         shopping_list = [
             {
                 'name': item['ingredient__name'],
-                'amount': f"{item['total_amount']} {item['ingredient__measurement_unit']}"
+                'amount': (
+                    f"{item['total_amount']} "
+                    f"{item['ingredient__measurement_unit']}"
+                )
             }
             for item in ingredients
         ]
@@ -172,6 +181,9 @@ class RecipesViewSet(viewsets.ModelViewSet):
 
         # Возвращаем PDF как ответ
         with open(pdf_path, 'rb') as pdf_file:
-            response = HttpResponse(pdf_file.read(), content_type='application/pdf')
-            response['Content-Disposition'] = f'attachment; filename="{user.username}_shopping_list.pdf"'
+            response = HttpResponse(
+                pdf_file.read(), content_type='application/pdf')
+            response['Content-Disposition'] = (
+                f'attachment; filename="{user.username}_shopping_list.pdf"'
+            )
             return response

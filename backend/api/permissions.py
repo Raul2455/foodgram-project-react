@@ -1,5 +1,6 @@
 from rest_framework import permissions
 
+
 class AdminOrReadOnlyPermission(permissions.BasePermission):
     """
     Разрешение, которое позволяет:
@@ -20,7 +21,8 @@ class AuthorAdminOrReadOnlyPermission(permissions.BasePermission):
     """
     Разрешение, которое позволяет:
     - Чтение (GET, HEAD, OPTIONS) для всех пользователей.
-    - Изменение (POST, PUT, PATCH, DELETE) только для автора объекта или администраторов.
+    - Изменение (POST, PUT, PATCH, DELETE)
+    только для автора объекта или администраторов.
     """
 
     def has_object_permission(self, request, view, obj):
