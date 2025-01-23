@@ -31,6 +31,7 @@ class TagAdmin(admin.ModelAdmin):
     prepopulated_fields = {'slug': ('name',)}
     empty_value_display = '-пусто-'
 
+
 class IngredientInRecipeInline(admin.TabularInline):
     """
     Встроенная панель для добавления ингредиентов в рецепт.

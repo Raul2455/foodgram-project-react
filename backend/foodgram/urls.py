@@ -10,6 +10,8 @@ from django.urls import include, path
 from django.http import HttpResponse
 
 # Простое представление для главной страницы
+
+
 def index(request):
     return HttpResponse("""
         <html>
@@ -19,12 +21,15 @@ def index(request):
         <body>
             <h1>Добро пожаловать в Foodgram!</h1>
             <p>Это главная страница вашего проекта.</p>
-            <p>Перейдите в <a href="/api/">API</a> или <a href="/admin/">админку</a>.</p>
+            <p>Перейдите в <a href="/api/">API</a> или
+            <a href="/admin/">админку</a>.</p>
         </body>
         </html>
     """)
 
 # Основные URL-маршруты приложения
+
+
 urlpatterns = [
     # Главная страница
     path("", index, name="index"),  # Главная страница
