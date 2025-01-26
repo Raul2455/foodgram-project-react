@@ -5,7 +5,15 @@
 
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import Ingredient, Recipe, Tag, Cart, Favorite, IngredientInRecipe
+
+from .models import (
+    Ingredient,
+    Recipe,
+    Tag,
+    ShoppingCart,
+    Favorite,
+    IngredientInRecipe,
+)
 
 
 @admin.register(Ingredient)
@@ -48,20 +56,22 @@ class RecipeAdmin(admin.ModelAdmin):
     Позволяет управлять рецептами.
     """
     list_display = ('name', 'author', 'is_favorite_count',
-                    'cooking_time', 'pub_date', 'image_preview')
+                    'cooking_time', 'pub_date',
+                    'image_preview', 'display_tags')
     search_fields = ('name', 'author__username', 'tags__name')
     list_filter = ('author', 'tags', 'pub_date')
     inlines = (IngredientInRecipeInline,)
     readonly_fields = ('pub_date', 'image_preview')
     empty_value_display = '-пусто-'
 
+    @admin.display(description='В избранном (раз)')
     def is_favorite_count(self, obj):
         """
         Возвращает количество добавлений рецепта в избранное.
         """
         return obj.favorites.count()
-    is_favorite_count.short_description = 'В избранном (раз)'
 
+    @admin.display(description='Превью изображения')
     def image_preview(self, obj):
         """
         Возвращает HTML-превью изображения рецепта.
@@ -72,7 +82,13 @@ class RecipeAdmin(admin.ModelAdmin):
                 obj.image.url
             )
         return '-пусто-'
-    image_preview.short_description = 'Превью изображения'
+
+    @admin.display(description='Теги')
+    def display_tags(self, obj):
+        """
+        Возвращает строку с тегами для отображения в админке.
+        """
+        return ', '.join(tag.name for tag in obj.tags.all())
 
     def get_queryset(self, request):
         """
@@ -81,10 +97,10 @@ class RecipeAdmin(admin.ModelAdmin):
         return super().get_queryset(request).prefetch_related('favorites')
 
 
-@admin.register(Cart)
-class CartAdmin(admin.ModelAdmin):
+@admin.register(ShoppingCart)
+class ShoppingCartAdmin(admin.ModelAdmin):
     """
-    Административная панель для модели Cart.
+    Административная панель для модели ShoppingCart.
     Позволяет управлять корзиной покупок.
     """
     list_display = ('user', 'recipe')

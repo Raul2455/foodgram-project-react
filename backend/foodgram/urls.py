@@ -1,15 +1,6 @@
-"""
-Модуль для настройки URL-маршрутов проекта Foodgram.
-
-Этот модуль определяет основные маршруты для API, административной панели
-и аутентификации (например, Djoser).
-"""
-
 from django.contrib import admin
 from django.urls import include, path
 from django.http import HttpResponse
-
-# Простое представление для главной страницы
 
 
 def index(request):
@@ -27,20 +18,11 @@ def index(request):
         </html>
     """)
 
-# Основные URL-маршруты приложения
-
 
 urlpatterns = [
-    # Главная страница
-    path("", index, name="index"),  # Главная страница
-
-    # Маршруты для API
+    path("", index, name="index"),
     path("api/", include("api.urls", namespace="api")),
-
-    # Маршруты для административной панели Django
+    # Убираем эту строчку:  path("api/", include("users.urls")),
     path("admin/", admin.site.urls),
-
-    # Маршруты для аутентификации (Djoser)
-    path("auth/", include("djoser.urls")),
     path("auth/", include("djoser.urls.authtoken")),
 ]

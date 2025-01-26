@@ -1,12 +1,11 @@
 """
 Модуль для сериализации данных, связанных с рецептами,
-пользователями, ингредиентами и тегами.
+пользователями, ингредиентами, тегами и подписками.
 """
 
 from django.db import transaction
 from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers
-from rest_framework.relations import SlugRelatedField
 from rest_framework.validators import UniqueTogetherValidator
 
 from recipes.models import (
@@ -15,8 +14,9 @@ from recipes.models import (
     IngredientInRecipe,
     Recipe,
     Tag,
+    ShoppingCart,
 )
-from users.models import User
+from users.models import User, Subscription
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -24,6 +24,8 @@ class UserSerializer(serializers.ModelSerializer):
     Сериализатор для модели User.
     Используется для отображения данных пользователя.
     """
+
+    is_subscribed = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = User
@@ -33,7 +35,81 @@ class UserSerializer(serializers.ModelSerializer):
             "email",
             "first_name",
             "last_name",
+            "is_subscribed",
         ]
+        read_only_fields = ("is_subscribed",)
+
+    def get_is_subscribed(self, obj):
+        """
+        Проверяет, подписан ли текущий пользователь на автора.
+        """
+        request = self.context.get("request")
+        if request and request.user.is_authenticated:
+            return Subscription.objects.filter(
+                user=request.user, author=obj
+            ).exists()
+        return False
+
+
+class SignupSerializer(serializers.ModelSerializer):
+    """
+    Сериализатор для регистрации пользователя.
+    Проверяет запрещенные имена и уникальность email.
+    """
+
+    username = serializers.CharField(max_length=150)
+    email = serializers.EmailField(max_length=254)
+    banned_names = ("me", "admin", "ADMIN", "administrator", "moderator")
+
+    class Meta:
+        model = User
+        fields = ("username", "email")
+
+    def validate_username(self, value):
+        """
+        Проверяет, что имя пользователя не является запрещенным.
+        """
+        if value.lower() in self.banned_names:
+            raise serializers.ValidationError(
+                "Использование этого имени запрещено."
+            )
+        return value
+
+    def validate_email(self, value):
+        """
+        Проверяет, что email уникален.
+        """
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError(
+                "Пользователь с таким email уже существует."
+            )
+        return value
+
+
+class TokenSerializer(serializers.Serializer):
+    """
+    Сериализатор для получения токена.
+    Проверяет учетные данные пользователя.
+    """
+
+    username = serializers.CharField(required=True)
+    password = serializers.CharField(required=True, write_only=True)
+
+    def validate(self, data):
+        """
+        Проверяет учетные данные и возвращает токен.
+        """
+        username = data.get("username")
+        password = data.get("password")
+
+        if username and password:
+            user = User.objects.filter(username=username).first()
+            if user and user.check_password(password):
+                return data
+            raise serializers.ValidationError("Неверные учетные данные.")
+        raise serializers.ValidationError(
+            "Необходимо указать имя пользователя и пароль."
+        )
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -145,16 +221,14 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
     Сериализатор для создания и обновления рецептов.
     Используется для обработки данных при создании или изменении рецепта.
     """
-
     ingredients = IngredientInRecipeSerializer(many=True)
     tags = serializers.PrimaryKeyRelatedField(
         queryset=Tag.objects.all(), many=True
     )
     image = Base64ImageField()
-    author = SlugRelatedField(
-        slug_field="username", read_only=True
-    )  # Использование SlugRelatedField
+    author = serializers.PrimaryKeyRelatedField(read_only=True)
 
+    # Переносим class Meta к началу определения класса RecipeWriteSerializer
     class Meta:
         model = Recipe
         fields = [
@@ -183,7 +257,7 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
             )
         return value
 
-    @transaction.atomic  # Использование транзакций
+    @transaction.atomic
     def create(self, validated_data):
         """
         Создает рецепт с ингредиентами и тегами.
@@ -195,7 +269,7 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         self._create_ingredients(recipe, ingredients)
         return recipe
 
-    @transaction.atomic  # Использование транзакций
+    @transaction.atomic
     def update(self, instance, validated_data):
         """
         Обновляет рецепт с ингредиентами и тегами.
@@ -244,12 +318,7 @@ class FavoriteSerializer(serializers.ModelSerializer):
         """
         Возвращает упрощенное представление рецепта.
         """
-        return {
-            "id": instance.recipe.id,
-            "name": instance.recipe.name,
-            "image": instance.recipe.image.url,
-            "cooking_time": instance.recipe.cooking_time,
-        }
+        return RecipeSmallSerializer(instance.recipe).data
 
 
 class ShoppingCartSerializer(serializers.ModelSerializer):
@@ -259,11 +328,11 @@ class ShoppingCartSerializer(serializers.ModelSerializer):
     """
 
     class Meta:
-        model = Favorite
+        model = ShoppingCart
         fields = ["id", "user", "recipe"]
         validators = [
             UniqueTogetherValidator(
-                queryset=Favorite.objects.all(),
+                queryset=ShoppingCart.objects.all(),
                 fields=["user", "recipe"],
                 message="Рецепт уже добавлен в корзину.",
             )
@@ -273,9 +342,57 @@ class ShoppingCartSerializer(serializers.ModelSerializer):
         """
         Возвращает упрощенное представление рецепта.
         """
-        return {
-            "id": instance.recipe.id,
-            "name": instance.recipe.name,
-            "image": instance.recipe.image.url,
-            "cooking_time": instance.recipe.cooking_time,
-        }
+        return RecipeSmallSerializer(instance.recipe).data
+
+
+class SubscriptionSerializer(serializers.ModelSerializer):
+    """
+    Сериализатор для модели Subscription.
+    Используется для работы с подписками.
+    """
+
+    class Meta:
+        model = Subscription
+        fields = ["user", "author"]
+        validators = [
+            UniqueTogetherValidator(
+                queryset=Subscription.objects.all(),
+                fields=["user", "author"],
+                message="Вы уже подписаны на этого автора.",
+            )
+        ]
+
+    def to_representation(self, instance):
+        """
+        Возвращает данные автора с рецептами.
+        """
+        return SubShowSerializer(instance.author, context=self.context).data
+
+
+class SubShowSerializer(UserSerializer):
+    """
+    Сериализатор для отображения подписок с рецептами.
+    Включает список рецептов автора.
+    """
+
+    recipes = serializers.SerializerMethodField()
+    recipes_count = serializers.SerializerMethodField()
+
+    class Meta(UserSerializer.Meta):
+        fields = UserSerializer.Meta.fields + ["recipes", "recipes_count"]
+
+    def get_recipes(self, obj):
+        """
+        Возвращает список рецептов автора.
+        """
+        request = self.context.get("request")
+        recipes = obj.recipes.all()[:3]
+        return RecipeSmallSerializer(
+            recipes, many=True, context={"request": request}
+        ).data
+
+    def get_recipes_count(self, obj):
+        """
+        Возвращает общее количество рецептов автора.
+        """
+        return obj.recipes.count()

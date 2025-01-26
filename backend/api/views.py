@@ -26,7 +26,7 @@ from api.serializers import (
     ShoppingCartSerializer,
 )
 from recipes.models import (
-    Cart,
+    ShoppingCart,
     Favorite,
     Ingredient,
     IngredientInRecipe,
@@ -126,7 +126,7 @@ class RecipesViewSet(viewsets.ModelViewSet):
 
         if request.method == 'POST':
             # Проверяем, не добавлен ли рецепт уже в корзину
-            cart, created = Cart.objects.get_or_create(
+            cart, created = ShoppingCart.objects.get_or_create(
                 user=user, recipe=recipe)
             if not created:
                 return Response(
@@ -138,7 +138,7 @@ class RecipesViewSet(viewsets.ModelViewSet):
 
         if request.method == 'DELETE':
             # Удаляем рецепт из корзины
-            cart = Cart.objects.filter(user=user, recipe=recipe)
+            cart = ShoppingCart.objects.filter(user=user, recipe=recipe)
             if not cart.exists():
                 return Response(
                     {'detail': 'Рецепт не найден в корзине.'},

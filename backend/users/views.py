@@ -2,24 +2,19 @@ from django.shortcuts import get_object_or_404
 from djoser.views import UserViewSet
 from rest_framework import permissions, status
 from rest_framework.decorators import action
-from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 
+from api.serializers import SubShowSerializer
 from users.models import Subscription, User
-from users.serializers import SubShowSerializer
-
-
-class CustomPagination(PageNumberPagination):
-    """Кастомная пагинация для списка подписок."""
-    page_size = 6
-    page_size_query_param = 'page_size'
-    max_page_size = 100
+from users.pagination import SubscriptionPagination
 
 
 class CustomUserViewSet(UserViewSet):
-    """Кастомный ViewSet для работы с пользователями и подписками."""
+    """
+    ViewSet для работы с пользователями и подписками.
+    """
 
-    pagination_class = CustomPagination
+    pagination_class = SubscriptionPagination
 
     @action(
         methods=['post', 'delete'],
@@ -27,7 +22,9 @@ class CustomUserViewSet(UserViewSet):
         permission_classes=[permissions.IsAuthenticated]
     )
     def subscribe(self, request, id=None):
-        """Обрабатывает подписку и отписку от пользователя."""
+        """
+        Обрабатывает подписку и отписку от пользователя.
+        """
         author = get_object_or_404(User, id=id)
         user = request.user
 
@@ -64,7 +61,9 @@ class CustomUserViewSet(UserViewSet):
         permission_classes=[permissions.IsAuthenticated]
     )
     def subscriptions(self, request):
-        """Возвращает список подписок текущего пользователя."""
+        """
+        Возвращает список подписок текущего пользователя.
+        """
         user = request.user
         subscribed_authors = User.objects.filter(
             subscribed__user=user
